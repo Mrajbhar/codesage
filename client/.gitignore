@@ -1,0 +1,9 @@
+# node / vite
+node_modules/
+dist/
+# .NET
+bin/
+obj/
+# env & secrets
+.env
+*.user
