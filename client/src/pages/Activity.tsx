@@ -4,22 +4,44 @@ import api from "../api/axios";
 import AppShell from "../components/AppShell";
 import { orgStore } from "../auth/orgStore";
 import {
-  BuildingIcon, MailIcon, UserIcon, SparklesIcon, CardIcon, ClockIcon,
+  BuildingIcon,
+  MailIcon,
+  UserIcon,
+  SparklesIcon,
+  CardIcon,
+  ClockIcon,
 } from "../components/icons";
 
-interface AuditDto { id: string; actorName: string; action: string; target: string; createdAt: string }
+interface AuditDto {
+  id: string;
+  actorName: string;
+  action: string;
+  target: string;
+  createdAt: string;
+}
 
 // Map each action to an icon and a human sentence.
 function describe(a: AuditDto): { icon: ReactNode; text: string } {
   switch (a.action) {
-    case "org.created": return { icon: <BuildingIcon />, text: `created the organization` };
-    case "member.invited": return { icon: <MailIcon />, text: `invited ${a.target}` };
-    case "member.joined": return { icon: <UserIcon />, text: `joined the organization` };
-    case "member.role_changed": return { icon: <UserIcon />, text: `changed a role — ${a.target}` };
-    case "member.removed": return { icon: <UserIcon />, text: `removed ${a.target}` };
-    case "review.ran": return { icon: <SparklesIcon />, text: `ran an AI review on ${a.target}` };
-    case "plan.changed": return { icon: <CardIcon />, text: `switched the plan to ${a.target}` };
-    default: return { icon: <ClockIcon />, text: `${a.action} ${a.target}` };
+    case "org.created":
+      return { icon: <BuildingIcon />, text: `created the organization` };
+    case "member.invited":
+      return { icon: <MailIcon />, text: `invited ${a.target}` };
+    case "member.joined":
+      return { icon: <UserIcon />, text: `joined the organization` };
+    case "member.role_changed":
+      return { icon: <UserIcon />, text: `changed a role — ${a.target}` };
+    case "member.removed":
+      return { icon: <UserIcon />, text: `removed ${a.target}` };
+    case "review.ran":
+      return {
+        icon: <SparklesIcon />,
+        text: `ran an AI review on ${a.target}`,
+      };
+    case "plan.changed":
+      return { icon: <CardIcon />, text: `switched the plan to ${a.target}` };
+    default:
+      return { icon: <ClockIcon />, text: `${a.action} ${a.target}` };
   }
 }
 
@@ -35,40 +57,80 @@ function when(iso: string) {
 export default function Activity() {
   const orgId = orgStore.get();
   const [logs, setLogs] = useState<AuditDto[] | null>(null);
+  const [filter, setFilter] = useState("");
 
   useEffect(() => {
-    if (!orgId) { setLogs([]); return; }
-    api.get("/audit", { params: { limit: 100 } })
+    if (!orgId) {
+      setLogs([]);
+      return;
+    }
+    api
+      .get("/audit", { params: { limit: 100 } })
       .then((r) => setLogs(r.data))
       .catch(() => setLogs([]));
   }, [orgId]);
 
+  const shown = (logs ?? []).filter((a) => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      a.actorName.toLowerCase().includes(q) ||
+      a.action.toLowerCase().includes(q) ||
+      (a.target ?? "").toLowerCase().includes(q)
+    );
+  });
+
   return (
     <AppShell>
       <header className="topbar">
-        <div><div className="eyebrow">Activity</div><h1 className="page__title">Audit timeline</h1></div>
+        <div>
+          <div className="eyebrow">Activity</div>
+          <h1 className="page__title">Audit timeline</h1>
+        </div>
+        {logs && logs.length > 0 && (
+          <input
+            className="input filter-input"
+            placeholder="Filter by person or action…"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+        )}
       </header>
 
-      {!orgId && <p className="muted">Pick or create an organization to see its activity.</p>}
+      {!orgId && (
+        <p className="muted">
+          Pick or create an organization to see its activity.
+        </p>
+      )}
 
       {logs === null && <p className="muted">Loading…</p>}
 
       {logs && logs.length === 0 && orgId && (
         <div className="empty">
-          <div className="empty__glyph"><ClockIcon /></div>
-          <p>No activity yet. Actions like invites, role changes, plan changes and AI reviews will appear here.</p>
+          <div className="empty__glyph">
+            <ClockIcon />
+          </div>
+          <p>
+            No activity yet. Actions like invites, role changes, plan changes
+            and AI reviews will appear here.
+          </p>
         </div>
       )}
 
       {logs && logs.length > 0 && (
         <div className="timeline">
-          {logs.map((a) => {
+          {shown.length === 0 && (
+            <p className="muted">No activity matches “{filter}”.</p>
+          )}
+          {shown.map((a) => {
             const d = describe(a);
             return (
               <div className="tlrow" key={a.id}>
                 <div className="tlrow__icon">{d.icon}</div>
                 <div className="tlrow__body">
-                  <div className="tlrow__text"><b>{a.actorName}</b> {d.text}</div>
+                  <div className="tlrow__text">
+                    <b>{a.actorName}</b> {d.text}
+                  </div>
                   <div className="tlrow__time">{when(a.createdAt)}</div>
                 </div>
               </div>
