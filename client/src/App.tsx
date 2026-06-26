@@ -18,6 +18,7 @@ import Activity from "./pages/Activity";
 import Search from "./pages/Search";
 import AcceptInvite from "./pages/Acceptinvite";
 import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 
 export default function App() {
@@ -117,6 +118,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
                 </ProtectedRoute>
               }
             />

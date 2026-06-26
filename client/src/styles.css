@@ -3068,3 +3068,73 @@ a:hover {
     animation: none !important;
   }
 }
+
+/* auto-review toggle on repo rows */
+.repo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.repo__main {
+  flex: 1;
+  min-width: 0;
+}
+.watchbtn {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--dim);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.watchbtn:hover {
+  color: var(--text);
+  border-color: var(--teal-line);
+}
+.watchbtn--on {
+  background: var(--teal-soft);
+  color: var(--teal);
+  border-color: var(--teal-line);
+}
+
+/* settings page */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.setting-row:last-child {
+  border-bottom: none;
+}
+.panel--danger {
+  border-color: rgba(242, 114, 138, 0.4);
+}
+.panel--danger .panel__head h3 {
+  color: var(--danger);
+}
+.btn--danger {
+  background: rgba(242, 114, 138, 0.14);
+  color: var(--danger);
+  border: 1px solid rgba(242, 114, 138, 0.4);
+}
+.btn--danger:hover {
+  background: rgba(242, 114, 138, 0.22);
+}
+.alert--ok {
+  border-color: var(--teal-line);
+  color: var(--teal);
+  background: var(--teal-soft);
+}

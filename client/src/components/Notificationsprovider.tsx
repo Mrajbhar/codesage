@@ -1,13 +1,16 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import * as signalR from "@microsoft/signalr";
+import api from "../api/axios";
 import { tokenStore } from "../auth/tokenStore";
 import { orgStore } from "../auth/orgStore";
 
 export interface Note {
+  id?: string;
   type: string;
   message: string;
   at: string;
+  read?: boolean;
 }
 
 interface Ctx {
@@ -23,12 +26,12 @@ const NotificationsContext = createContext<Ctx>({
 export const useNotifications = () => useContext(NotificationsContext);
 
 function hubUrl() {
-  const api = import.meta.env.VITE_API_URL ?? "";
-  return api.replace(/\/api\/?$/, "") + "/hub/notifications";
+  const apiUrl = import.meta.env.VITE_API_URL ?? "";
+  return apiUrl.replace(/\/api\/?$/, "") + "/hub/notifications";
 }
 
-// Does NOT depend on AuthContext, so it's safe anywhere in the tree.
-// It watches for a token + org appearing and (re)connects when they do.
+// Loads stored history on connect, then merges live pushes on top.
+// Independent of AuthContext so nesting/casing can't crash it.
 export default function NotificationsProvider({
   children,
 }: {
@@ -39,10 +42,32 @@ export default function NotificationsProvider({
   const connRef = useRef<signalR.HubConnection | null>(null);
   const keyRef = useRef<string>("");
 
+  async function loadHistory() {
+    try {
+      const r = await api.get("/notifications", { params: { limit: 30 } });
+      setNotes(r.data.items ?? []);
+      setUnread(r.data.unread ?? 0);
+    } catch {
+      /* not fatal */
+    }
+  }
+
+  async function markRead() {
+    setUnread(0);
+    setNotes((prev) => prev.map((n) => ({ ...n, read: true })));
+    try {
+      await api.post("/notifications/read");
+    } catch {
+      /* ignore */
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
 
     async function connect(token: string, orgId: string) {
+      await loadHistory(); // history first, so the bell survives refresh
+
       const conn = new signalR.HubConnectionBuilder()
         .withUrl(`${hubUrl()}?orgId=${orgId}&access_token=${token}`, {
           transport:
@@ -67,11 +92,10 @@ export default function NotificationsProvider({
         console.info("[notifications] connected");
       } catch (e: any) {
         console.warn("[notifications] connect failed:", e?.message ?? e);
-        keyRef.current = ""; // allow a retry on the next tick
+        keyRef.current = ""; // allow retry next tick
       }
     }
 
-    // Poll for auth/org becoming available; reconnect when they change.
     const timer = setInterval(() => {
       const token = tokenStore.getAccess();
       const orgId = orgStore.get();
@@ -88,6 +112,8 @@ export default function NotificationsProvider({
         connRef.current.stop();
         connRef.current = null;
         keyRef.current = "";
+        setNotes([]);
+        setUnread(0);
       }
     }, 1500);
 
@@ -99,9 +125,7 @@ export default function NotificationsProvider({
   }, []);
 
   return (
-    <NotificationsContext.Provider
-      value={{ notes, unread, markRead: () => setUnread(0) }}
-    >
+    <NotificationsContext.Provider value={{ notes, unread, markRead }}>
       {children}
     </NotificationsContext.Provider>
   );
