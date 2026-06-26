@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import OrgPicker from "./Orgpicker";
+import OrgPicker from "./OrgPicker";
 import {
-  GridIcon, RepoIcon, UserIcon, ShieldIcon, LogoutIcon, CodeIcon, ReviewIcon, BuildingIcon, CardIcon, ChartIcon,
+  GridIcon, RepoIcon, UserIcon, ShieldIcon, LogoutIcon, CodeIcon, ReviewIcon, BuildingIcon, CardIcon, ChartIcon, ClockIcon,
 } from "./icons";
 
 export default function AppShell({ children }: { children: ReactNode }) {
@@ -31,6 +31,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <Link className={cls("/team")} to="/team"><BuildingIcon /> Team</Link>
           <Link className={cls("/billing")} to="/billing"><CardIcon /> Billing</Link>
           <Link className={cls("/analytics")} to="/analytics"><ChartIcon /> Analytics</Link>
+          <Link className={cls("/activity")} to="/activity"><ClockIcon /> Activity</Link>
           <Link className={cls("/profile")} to="/profile"><UserIcon /> Profile</Link>
           {user?.role === "Admin" && (
             <Link className={cls("/admin")} to="/admin"><ShieldIcon /> Admin</Link>

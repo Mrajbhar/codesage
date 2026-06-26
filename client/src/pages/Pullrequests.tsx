@@ -41,7 +41,7 @@ export default function PullRequests() {
     if (!active) return;
     setReviewing(true); setReview(null); setError("");
     try {
-      const r = await api.post("/ai/review", { fullName: repo, number: active.number });
+      const r = await api.post("/ai/review", { fullName: repo, number: active.number, title: active.title });
       setReview(r.data);
     } catch (e: any) {
       setError(e?.response?.data?.message ?? "The AI review failed.");

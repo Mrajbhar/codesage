@@ -7,13 +7,26 @@ import CodebaseGraph from "../components/CodebaseGraph";
 import CodebaseMap from "../components/Codebasemap";
 import type { Overview } from "../components/Codebasemap";
 import { startGitHubLink } from "../auth/oauth";
-import { RepoIcon, ReviewIcon, InboxIcon, GitHubIcon } from "../components/icons";
+import { RepoIcon, ReviewIcon, InboxIcon, GitHubIcon, SparklesIcon } from "../components/icons";
+
+interface RecentReview {
+  id: string; repoFullName: string; pullNumber: number; title: string; summary: string;
+  commentCount: number; criticalCount: number; ranByName: string; createdAt: string;
+}
+
+function timeAgo(iso: string) {
+  const s = Math.max(1, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 3600) return Math.round(s / 60) + "m ago";
+  if (s < 86400) return Math.round(s / 3600) + "h ago";
+  return Math.round(s / 86400) + "d ago";
+}
 
 export default function Dashboard() {
   const { user } = useAuth();
   const firstName = user?.displayName?.split(" ")[0] ?? "there";
   const [overview, setOverview] = useState<Overview | null>(null);
   const [loadingMap, setLoadingMap] = useState(false);
+  const [reviews, setReviews] = useState<RecentReview[] | null>(null);
 
   useEffect(() => {
     if (!user?.gitHubConnected) return;
@@ -23,6 +36,12 @@ export default function Dashboard() {
       .catch(() => setOverview(null))
       .finally(() => setLoadingMap(false));
   }, [user?.gitHubConnected]);
+
+  useEffect(() => {
+    api.get("/reviews", { params: { limit: 8 } })
+      .then((r) => setReviews(r.data))
+      .catch(() => setReviews([]));
+  }, []);
 
   const repoCount = overview ? overview.totals.repos : user?.gitHubConnected ? "…" : "—";
   const hasMap = !!overview && overview.repos.length > 0;
@@ -99,11 +118,39 @@ export default function Dashboard() {
       </section>
 
       <section className="panel">
-        <div className="panel__head"><h3>Recent reviews</h3></div>
-        <div className="empty">
-          <div className="empty__glyph"><InboxIcon /></div>
-          <p>No reviews yet. They'll show up here once you connect a repository and open a pull request.</p>
+        <div className="panel__head">
+          <h3>Recent reviews</h3>
+          {reviews && reviews.length > 0 && <Link className="panel__hint" to="/pulls">View all</Link>}
         </div>
+        {reviews === null ? (
+          <div className="panel__body"><p className="muted">Loading…</p></div>
+        ) : reviews.length === 0 ? (
+          <div className="empty">
+            <div className="empty__glyph"><InboxIcon /></div>
+            <p>No reviews yet. Open the Pull requests tab, pick a PR, and run an AI review — it'll show up here.</p>
+          </div>
+        ) : (
+          <div className="reviewlist">
+            {reviews.map((r) => (
+              <Link className="reviewitem" key={r.id} to="/pulls">
+                <div className="reviewitem__icon"><SparklesIcon /></div>
+                <div className="reviewitem__main">
+                  <div className="reviewitem__title">{r.title}</div>
+                  <div className="reviewitem__summary">{r.summary}</div>
+                  <div className="reviewitem__meta">
+                    <span className="mono">{r.repoFullName} #{r.pullNumber}</span>
+                    <span>· {r.ranByName}</span>
+                    <span>· {timeAgo(r.createdAt)}</span>
+                  </div>
+                </div>
+                <div className="reviewitem__counts">
+                  {r.criticalCount > 0 && <span className="rc__sev rc__sev--critical">{r.criticalCount} critical</span>}
+                  <span className="rc__sev rc__sev--info">{r.commentCount} note{r.commentCount === 1 ? "" : "s"}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </AppShell>
   );
