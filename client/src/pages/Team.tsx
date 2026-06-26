@@ -8,6 +8,7 @@ interface OrgDto { id: string; name: string; slug: string; plan: string; myRole:
 interface Member { userId: string; email: string; displayName: string; role: string; joinedAt: string }
 interface Invite { email: string; role: string; token: string; createdAt: string }
 interface OrgDetail { id: string; name: string; slug: string; plan: string; myRole: string; members: Member[]; invitations: Invite[] }
+interface PendingInvite { orgId: string; orgName: string; role: string; token: string; invitedBy: string; createdAt: string }
 
 export default function Team() {
   const { user } = useAuth();
@@ -19,9 +20,24 @@ export default function Team() {
   const [inviteRole, setInviteRole] = useState("Member");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
+  const [pending, setPending] = useState<PendingInvite[]>([]);
 
-  useEffect(() => { loadOrgs(); }, []);
+  useEffect(() => { loadOrgs(); loadPending(); }, []);
   useEffect(() => { if (selected) loadDetail(selected); else setDetail(null); }, [selected]);
+
+  function loadPending() {
+    api.get("/orgs/invites/pending").then((r) => setPending(r.data)).catch(() => setPending([]));
+  }
+
+  async function acceptPending(token: string) {
+    setError("");
+    try {
+      const r = await api.post("/orgs/invites/accept", { token });
+      await loadOrgs();
+      loadPending();
+      setSelected(r.data.id);
+    } catch (e: any) { setError(e?.response?.data?.message ?? "Couldn't accept the invitation."); }
+  }
 
   function loadOrgs() {
     api.get("/orgs").then((r) => {
@@ -95,6 +111,22 @@ export default function Team() {
       </header>
 
       {error && <div className="alert">{error}</div>}
+
+      {pending.length > 0 && (
+        <section className="panel invites-panel">
+          <div className="panel__head"><h3>Invitations for you</h3><span className="panel__hint">{pending.length}</span></div>
+          <div className="invites">
+            {pending.map((p) => (
+              <div className="inviterow" key={p.token}>
+                <MailIcon className="ic" />
+                <span className="inviterow__email"><b>{p.orgName}</b> · invited by {p.invitedBy}</span>
+                <span className="badge">{p.role}</span>
+                <button className="btn btn--primary btn--xs" onClick={() => acceptPending(p.token)}>Accept</button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="panel">
         <div className="panel__head"><h3>Your organizations</h3>{orgs && <span className="panel__hint">{orgs.length}</span>}</div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import AppShell from "../components/AppShell";
-import { orgStore } from "../auth/OrgPicker";
+import { orgStore } from "../auth/orgStore";
 import { CardIcon } from "../components/icons";
 
 interface Plan { id: string; name: string; priceCents: number; aiCallsPerMonth: number; memberLimit: number; features: string[] }
@@ -52,34 +52,57 @@ export default function Billing() {
     setError(""); setNote(""); setBusy(planId);
     try {
       const r = await api.post("/billing/checkout", { plan: planId }, { params: { orgId } });
+      const mode = r.data.mode;
 
-      // Simulated mode (no keys) OR downgrade to Free — the API already flipped the plan.
-      if (r.data.simulated) {
-        setNote(r.data.message);
-        load();
-        return;
-      }
+      // No keys, or downgrade to Free — the API already flipped the plan.
+      if (mode === "simulated") { setNote(r.data.message); load(); return; }
 
-      // Live Razorpay: r.data.url carries the subscription_id. Open Checkout with it.
-      const subscriptionId = r.data.url;
-      if (!subscriptionId || !config?.keyId) {
-        setError(r.data.message || "Razorpay isn't configured yet.");
-        return;
-      }
+      if (mode === "error") { setError(r.data.message); return; }
 
+      if (!config?.keyId) { setError("Razorpay key isn't configured."); return; }
       await loadRazorpay();
       const Razorpay = (window as any).Razorpay;
-      const rzp = new Razorpay({
-        key: config.keyId,
-        subscription_id: subscriptionId,
-        name: "CodeSage",
-        description: `${planId} plan`,
-        handler: () => { setNote("Payment authorized. Your plan will switch once Razorpay confirms it."); load(); },
-        modal: { ondismiss: () => setBusy("") },
-        theme: { color: "#2DD4BF" },
-      });
-      rzp.on("payment.failed", (e: any) => setError(e?.error?.description ?? "Payment failed."));
-      rzp.open();
+
+      // Recurring subscription (plan_id configured).
+      if (mode === "subscription") {
+        const rzp = new Razorpay({
+          key: config.keyId, subscription_id: r.data.subscriptionId,
+          name: "CodeSage", description: `${planId} plan`,
+          theme: { color: "#2DD4BF" },
+          modal: { ondismiss: () => setBusy("") },
+          handler: () => { setNote("Payment authorized. Your plan will switch once Razorpay confirms it."); load(); },
+        });
+        rzp.on("payment.failed", (e: any) => setError(e?.error?.description ?? "Payment failed."));
+        rzp.open();
+        return;
+      }
+
+      // One-time order (dev/order mode — no plan_id needed).
+      if (mode === "order") {
+        const rzp = new Razorpay({
+          key: config.keyId, order_id: r.data.orderId, amount: r.data.amount, currency: "INR",
+          name: "CodeSage", description: `${planId} plan (one-time)`,
+          theme: { color: "#2DD4BF" },
+          modal: { ondismiss: () => setBusy("") },
+          handler: async (resp: any) => {
+            try {
+              await api.post("/billing/verify", {
+                plan: planId,
+                razorpayOrderId: resp.razorpay_order_id,
+                razorpayPaymentId: resp.razorpay_payment_id,
+                razorpaySignature: resp.razorpay_signature,
+              }, { params: { orgId } });
+              setNote(`Payment verified — switched to ${planId}.`);
+              load();
+            } catch (e: any) {
+              setError(e?.response?.data?.message ?? "Payment verification failed.");
+            }
+          },
+        });
+        rzp.on("payment.failed", (e: any) => setError(e?.error?.description ?? "Payment failed."));
+        rzp.open();
+        return;
+      }
     } catch (e: any) {
       setError(e?.response?.data?.message ?? "Couldn't switch plans.");
     } finally { setBusy(""); }
