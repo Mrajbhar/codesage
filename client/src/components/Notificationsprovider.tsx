@@ -5,24 +5,10 @@ import api from "../api/axios";
 import { tokenStore } from "../auth/tokenStore";
 import { orgStore } from "../auth/orgStore";
 
-export interface Note {
-  id?: string;
-  type: string;
-  message: string;
-  at: string;
-  read?: boolean;
-}
+export interface Note { id?: string; type: string; message: string; at: string; read?: boolean }
 
-interface Ctx {
-  notes: Note[];
-  unread: number;
-  markRead: () => void;
-}
-const NotificationsContext = createContext<Ctx>({
-  notes: [],
-  unread: 0,
-  markRead: () => {},
-});
+interface Ctx { notes: Note[]; unread: number; markRead: () => void; hasMore: boolean; loadMore: () => void }
+const NotificationsContext = createContext<Ctx>({ notes: [], unread: 0, markRead: () => {}, hasMore: false, loadMore: () => {} });
 export const useNotifications = () => useContext(NotificationsContext);
 
 function hubUrl() {
@@ -32,13 +18,10 @@ function hubUrl() {
 
 // Loads stored history on connect, then merges live pushes on top.
 // Independent of AuthContext so nesting/casing can't crash it.
-export default function NotificationsProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function NotificationsProvider({ children }: { children: ReactNode }) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [unread, setUnread] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const connRef = useRef<signalR.HubConnection | null>(null);
   const keyRef = useRef<string>("");
 
@@ -47,32 +30,33 @@ export default function NotificationsProvider({
       const r = await api.get("/notifications", { params: { limit: 30 } });
       setNotes(r.data.items ?? []);
       setUnread(r.data.unread ?? 0);
-    } catch {
-      /* not fatal */
-    }
+      setHasMore(r.data.hasMore ?? false);
+    } catch { /* not fatal */ }
+  }
+
+async function loadMore() {
+    try {
+      const r = await api.get("/notifications", { params: { limit: 30, offset: notes.length } });
+      setNotes((prev) => [...prev, ...(r.data.items ?? [])]);
+      setHasMore(r.data.hasMore ?? false);
+    } catch { /* ignore */ }
   }
 
   async function markRead() {
     setUnread(0);
     setNotes((prev) => prev.map((n) => ({ ...n, read: true })));
-    try {
-      await api.post("/notifications/read");
-    } catch {
-      /* ignore */
-    }
+    try { await api.post("/notifications/read"); } catch { /* ignore */ }
   }
 
   useEffect(() => {
     let cancelled = false;
 
     async function connect(token: string, orgId: string) {
-      await loadHistory(); // history first, so the bell survives refresh
+      await loadHistory();   // history first, so the bell survives refresh
 
       const conn = new signalR.HubConnectionBuilder()
         .withUrl(`${hubUrl()}?orgId=${orgId}&access_token=${token}`, {
-          transport:
-            signalR.HttpTransportType.WebSockets |
-            signalR.HttpTransportType.LongPolling,
+          transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling,
         })
         .withAutomaticReconnect()
         .build();
@@ -84,15 +68,12 @@ export default function NotificationsProvider({
 
       try {
         await conn.start();
-        if (cancelled) {
-          conn.stop();
-          return;
-        }
+        if (cancelled) { conn.stop(); return; }
         connRef.current = conn;
         console.info("[notifications] connected");
       } catch (e: any) {
         console.warn("[notifications] connect failed:", e?.message ?? e);
-        keyRef.current = ""; // allow retry next tick
+        keyRef.current = "";   // allow retry next tick
       }
     }
 
@@ -107,25 +88,19 @@ export default function NotificationsProvider({
         connRef.current = null;
         connect(token!, orgId!);
       }
-      if (!token && connRef.current) {
-        // logged out
+      if (!token && connRef.current) {       // logged out
         connRef.current.stop();
         connRef.current = null;
         keyRef.current = "";
-        setNotes([]);
-        setUnread(0);
+        setNotes([]); setUnread(0);
       }
     }, 1500);
 
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-      connRef.current?.stop();
-    };
+    return () => { cancelled = true; clearInterval(timer); connRef.current?.stop(); };
   }, []);
 
   return (
-    <NotificationsContext.Provider value={{ notes, unread, markRead }}>
+    <NotificationsContext.Provider value={{ notes, unread, markRead, hasMore, loadMore }}>
       {children}
     </NotificationsContext.Provider>
   );

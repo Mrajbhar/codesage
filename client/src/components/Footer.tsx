@@ -11,9 +11,9 @@ export default function Footer() {
       </div>
 
       <nav className="appfooter__links">
-        <Link to="/dashboard">Docs</Link>
-        <Link to="/dashboard">Changelog</Link>
-        <Link to="/dashboard">Privacy</Link>
+        <Link to="/docs">Docs</Link>
+        <Link to="/changelog">Changelog</Link>
+        <Link to="/privacy">Privacy</Link>
       </nav>
 
       <div className="appfooter__meta">

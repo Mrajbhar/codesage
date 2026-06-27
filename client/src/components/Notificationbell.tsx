@@ -10,7 +10,7 @@ function ago(iso: string) {
 }
 
 export default function NotificationBell() {
-  const { notes, unread, markRead } = useNotifications();
+  const { notes, unread, markRead, hasMore, loadMore } = useNotifications();
   const [open, setOpen] = useState(false);
 
   function toggle() {
@@ -37,6 +37,9 @@ export default function NotificationBell() {
               <div><div className="bell__msg">{n.message}</div><div className="bell__time">{ago(n.at)}</div></div>
             </div>
           ))}
+          {hasMore && (
+            <button className="bell__more" onClick={loadMore}>Load older</button>
+          )}
         </div>
       )}
     </div>

@@ -1,19 +1,21 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { GitHubIcon, GoogleIcon } from "../components/icons";
 import CodebaseGraph from "../components/CodebaseGraph";
+import NodeField from "../components/Nodefield";
 import { startGitHubLogin, startGoogleLogin } from "../auth/oauth";
+import PasswordInput from "../components/PasswordInput";
 
 export default function Register() {
   const { register } = useAuth();
-  const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [sent, setSent] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -21,7 +23,7 @@ export default function Register() {
     setSubmitting(true);
     try {
       await register(email, password, displayName);
-      navigate("/dashboard");
+      setSent(true);
     } catch (err: any) {
       setError(err?.response?.data?.message ?? "Could not create your account. Try again.");
     } finally {
@@ -32,6 +34,9 @@ export default function Register() {
   return (
     <div className="auth">
       <aside className="auth__brand">
+        <NodeField density={1.1} />
+        <div className="auth__orb auth__orb--1" />
+        <div className="auth__orb auth__orb--2" />
         <span className="brandmark"><span className="brandmark__glyph">◇</span> CodeSage</span>
 
         <div className="brand__pitch">
@@ -54,6 +59,14 @@ export default function Register() {
             <p className="card__sub">Free while you set up your first repository.</p>
           </div>
 
+          {sent ? (
+            <>
+              <div className="alert alert--ok">Account created. We've emailed a verification link to <b>{email}</b> — click it, then sign in.</div>
+              <p className="muted" style={{ fontSize: 13 }}>In development, the link is printed in your API console.</p>
+              <Link className="btn btn--primary btn--block" to="/login">Go to sign in</Link>
+            </>
+          ) : (
+          <>
           {error && <div className="alert">{error}</div>}
 
           <div className="field">
@@ -70,8 +83,8 @@ export default function Register() {
 
           <div className="field">
             <label className="field__label" htmlFor="password">Password</label>
-            <input id="password" className="input" type="password" placeholder="At least 8 characters"
-              value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+            <PasswordInput id="password" placeholder="At least 8 characters" value={password}
+              onChange={setPassword} required autoComplete="new-password" />
           </div>
 
           <button className="btn btn--primary btn--block" disabled={submitting}>
@@ -84,6 +97,8 @@ export default function Register() {
             <button type="button" className="btn btn--ghost btn--block" onClick={startGitHubLogin}><GitHubIcon /> Sign up with GitHub</button>
             <button type="button" className="btn btn--ghost btn--block" onClick={startGoogleLogin}><GoogleIcon /> Sign up with Google</button>
           </div>
+          </>
+          )}
 
           <p className="muted" style={{ textAlign: "center" }}>
             Already have an account? <Link to="/login">Sign in</Link>

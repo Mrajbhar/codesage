@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import AppShell from "../components/AppShell";
-import { orgStore } from "../auth/OrgPicker";
+import { orgStore } from "../auth/orgStore";
+import { SkeletonRows } from "../components/Skeleton";
 
 interface Period { period: string; explain: number; review: number; total: number }
 interface Overview { members: number; plan: string; comments: number;
@@ -27,7 +28,7 @@ export default function Analytics() {
   if (!data) return (
     <AppShell>
       <header className="topbar"><div><div className="eyebrow">Analytics</div><h1 className="page__title">Analytics</h1></div></header>
-      <p className="muted">Loading…</p>
+      <SkeletonRows rows={5} />
     </AppShell>
   );
 

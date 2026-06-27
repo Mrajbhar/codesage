@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../api/axios";
 import AppShell from "../components/AppShell";
 import { SearchIcon, SparklesIcon } from "../components/icons";
+import EmptyState from "../components/EmptyState";
 
 interface Repo { fullName: string }
 interface Result { path: string; repoFullName: string; score: number }
@@ -76,7 +77,7 @@ export default function Search() {
         <section className="panel">
           <div className="panel__head"><h3>Results</h3><span className="panel__hint">{results.length}</span></div>
           {results.length === 0 ? (
-            <div className="panel__body"><p className="muted">No matches. Has this repo been indexed yet?</p></div>
+            <EmptyState icon={<SearchIcon />} title="No matches found">Try different keywords, or make sure this repository has been indexed for semantic search.</EmptyState>
           ) : (
             <div className="srlist">
               {results.map((r) => (

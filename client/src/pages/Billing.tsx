@@ -3,6 +3,7 @@ import api from "../api/axios";
 import AppShell from "../components/AppShell";
 import { orgStore } from "../auth/orgStore";
 import { CardIcon } from "../components/icons";
+import EmptyState from "../components/EmptyState";
 
 interface Plan { id: string; name: string; priceCents: number; aiCallsPerMonth: number; memberLimit: number; features: string[] }
 interface UsageDto { period: string; used: number; limit: number; explain: number; review: number }
@@ -168,7 +169,7 @@ export default function Billing() {
         <section className="panel">
           <div className="panel__head"><h3>Billing history</h3><CardIcon className="ic" /></div>
           {summary.events.length === 0 ? (
-            <div className="panel__body"><p className="muted">No billing activity yet.</p></div>
+            <EmptyState icon={<CardIcon />} title="No billing activity yet">Plan changes, charges and invoices will appear here once you upgrade or get billed.</EmptyState>
           ) : (
             <div className="table-scroll">
               <table className="table">
