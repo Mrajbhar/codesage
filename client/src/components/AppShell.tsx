@@ -1,12 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import Header from "./Header";
 import Footer from "./Footer";
 import {
-  GridIcon, RepoIcon, UserIcon, ShieldIcon, LogoutIcon, CodeIcon, ReviewIcon,
-  BuildingIcon, CardIcon, ChartIcon, ClockIcon, SearchIcon,
+  GridIcon,
+  RepoIcon,
+  UserIcon,
+  ShieldIcon,
+  LogoutIcon,
+  CodeIcon,
+  ReviewIcon,
+  BuildingIcon,
+  CardIcon,
+  ChartIcon,
+  ClockIcon,
+  SearchIcon,
   GearIcon,
 } from "./icons";
 
@@ -50,13 +60,25 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const loc = useLocation();
   const [rail, setRail] = useState<boolean>(() => {
-    try { return localStorage.getItem(RAIL_KEY) === "1"; } catch { return false; }
+    try {
+      return localStorage.getItem(RAIL_KEY) === "1";
+    } catch {
+      return false;
+    }
   });
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Close the mobile drawer whenever the route changes.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [loc.pathname]);
 
   function toggleRail() {
     setRail((r) => {
       const next = !r;
-      try { localStorage.setItem(RAIL_KEY, next ? "1" : "0"); } catch {}
+      try {
+        localStorage.setItem(RAIL_KEY, next ? "1" : "0");
+      } catch {}
       return next;
     });
   }
@@ -65,21 +87,45 @@ export default function AppShell({ children }: { children: ReactNode }) {
     "nav__item" + (loc.pathname === path ? " nav__item--active" : "");
 
   const initials = (user?.displayName ?? "U")
-    .split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+    .split(" ")
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   return (
-    <div className={"app" + (rail ? " app--rail" : "")}>
-      <Header onToggleRail={toggleRail} rail={rail} />
+    <div
+      className={
+        "app" + (rail ? " app--rail" : "") + (menuOpen ? " app--menu-open" : "")
+      }
+    >
+      <Header
+        onToggleRail={toggleRail}
+        rail={rail}
+        onToggleMenu={() => setMenuOpen((o) => !o)}
+      />
 
       <div className="app__body">
+        {/* tap-to-close backdrop on mobile */}
+        <div
+          className="sidebar__scrim"
+          onClick={() => setMenuOpen(false)}
+          aria-hidden
+        />
         <aside className="sidebar">
           <nav className="nav">
             {NAV_GROUPS.map((group) => (
               <div className="nav__group" key={group.label}>
                 <div className="nav__grouplabel">{group.label}</div>
                 {group.items.map(({ to, label, icon: Icon }) => (
-                  <Link key={to} className={cls(to)} to={to} title={rail ? label : undefined}>
-                    <Icon /><span className="nav__label">{label}</span>
+                  <Link
+                    key={to}
+                    className={cls(to)}
+                    to={to}
+                    title={rail ? label : undefined}
+                  >
+                    <Icon />
+                    <span className="nav__label">{label}</span>
                   </Link>
                 ))}
               </div>
@@ -87,22 +133,34 @@ export default function AppShell({ children }: { children: ReactNode }) {
             {user?.role === "Admin" && (
               <div className="nav__group">
                 <div className="nav__grouplabel">Platform</div>
-                <Link className={cls("/admin")} to="/admin" title={rail ? "Admin" : undefined}>
-                  <ShieldIcon /><span className="nav__label">Admin</span>
+                <Link
+                  className={cls("/admin")}
+                  to="/admin"
+                  title={rail ? "Admin" : undefined}
+                >
+                  <ShieldIcon />
+                  <span className="nav__label">Admin</span>
                 </Link>
               </div>
             )}
           </nav>
 
           <div className="sidebar__user">
-            {user?.avatarUrl
-              ? <img className="avatar avatar--img" src={user.avatarUrl} alt="" />
-              : <div className="avatar">{initials}</div>}
+            {user?.avatarUrl ? (
+              <img className="avatar avatar--img" src={user.avatarUrl} alt="" />
+            ) : (
+              <div className="avatar">{initials}</div>
+            )}
             <div className="user__meta">
               <div className="user__name">{user?.displayName}</div>
               <div className="user__role">{user?.role}</div>
             </div>
-            <button className="iconbtn" onClick={logout} aria-label="Log out" title="Log out">
+            <button
+              className="iconbtn"
+              onClick={logout}
+              aria-label="Log out"
+              title="Log out"
+            >
               <LogoutIcon />
             </button>
           </div>
