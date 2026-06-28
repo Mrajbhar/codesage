@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import api from "../api/axios";
+import { orgStore } from "../auth/orgStore";
 import Header from "./Header";
 import Footer from "./Footer";
 import {
@@ -52,6 +54,31 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [rail, setRail] = useState<boolean>(() => {
     try { return localStorage.getItem(RAIL_KEY) === "1"; } catch { return false; }
   });
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Close the mobile drawer whenever the route changes.
+  useEffect(() => { setMenuOpen(false); }, [loc.pathname]);
+
+  // Determine the user's role in their current organization, to gate management menus.
+  const [orgRole, setOrgRole] = useState<string>("");
+  useEffect(() => {
+    let cancelled = false;
+    api.get("/orgs")
+      .then((r) => {
+        if (cancelled) return;
+        const current = orgStore.get();
+        const orgs: { id: string; myRole: string }[] = r.data ?? [];
+        const mine = orgs.find((o) => o.id === current) ?? orgs[0];
+        setOrgRole(mine?.myRole ?? "");
+      })
+      .catch(() => { if (!cancelled) setOrgRole(""); });
+    return () => { cancelled = true; };
+  }, [loc.pathname]);
+
+  // Org admins/owners (or platform admins) can manage the team and billing.
+  const canManageOrg =
+    user?.role === "Admin" ||
+    ["owner", "admin"].includes((orgRole || "").toLowerCase());
 
   function toggleRail() {
     setRail((r) => {
@@ -68,22 +95,29 @@ export default function AppShell({ children }: { children: ReactNode }) {
     .split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
   return (
-    <div className={"app" + (rail ? " app--rail" : "")}>
-      <Header onToggleRail={toggleRail} rail={rail} />
+    <div className={"app" + (rail ? " app--rail" : "") + (menuOpen ? " app--menu-open" : "")}>
+      <Header onToggleRail={toggleRail} rail={rail} onToggleMenu={() => setMenuOpen((o) => !o)} />
 
       <div className="app__body">
+        {/* tap-to-close backdrop on mobile */}
+        <div className="sidebar__scrim" onClick={() => setMenuOpen(false)} aria-hidden />
         <aside className="sidebar">
           <nav className="nav">
-            {NAV_GROUPS.map((group) => (
-              <div className="nav__group" key={group.label}>
-                <div className="nav__grouplabel">{group.label}</div>
-                {group.items.map(({ to, label, icon: Icon }) => (
-                  <Link key={to} className={cls(to)} to={to} title={rail ? label : undefined}>
-                    <Icon /><span className="nav__label">{label}</span>
-                  </Link>
-                ))}
-              </div>
-            ))}
+            {NAV_GROUPS.map((group) => {
+              const items = group.items.filter((it) =>
+                canManageOrg || !["/team", "/billing"].includes(it.to));
+              if (items.length === 0) return null;
+              return (
+                <div className="nav__group" key={group.label}>
+                  <div className="nav__grouplabel">{group.label}</div>
+                  {items.map(({ to, label, icon: Icon }) => (
+                    <Link key={to} className={cls(to)} to={to} title={rail ? label : undefined}>
+                      <Icon /><span className="nav__label">{label}</span>
+                    </Link>
+                  ))}
+                </div>
+              );
+            })}
             {user?.role === "Admin" && (
               <div className="nav__group">
                 <div className="nav__grouplabel">Platform</div>

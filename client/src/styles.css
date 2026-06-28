@@ -199,26 +199,43 @@ a:hover { color: var(--teal-hover); }
 }
 
 @media (max-width: 860px) {
-  /* header stops being sticky so the page scrolls naturally on mobile */
-  .appheader { position: static; height: auto; min-height: 58px; padding: 8px 14px; flex-wrap: wrap; gap: 10px; }
+  /* header stays put; show hamburger, keep brand compact */
+  .appheader { position: sticky; top: 0; z-index: 50; height: auto; min-height: 58px; padding: 8px 14px; gap: 10px; }
   .appheader__div { display: none; }
-  .appheader .brandmark__text { display: none; }
 
-  /* body becomes a single column; sidebar turns into a horizontal nav strip */
   .app__body,
   .app--rail .app__body { grid-template-columns: 1fr; }
+
+  /* sidebar becomes an off-canvas drawer that slides in from the left */
   .sidebar {
-    flex-direction: row; align-items: center; gap: 4px;
-    padding: 8px 12px; border-right: none; border-bottom: 1px solid var(--border);
-    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 200;
+    width: 270px; max-width: 82vw;
+    flex-direction: column; align-items: stretch; gap: 0;
+    padding: 16px 12px; border-right: 1px solid var(--border); border-bottom: none;
+    background: var(--surface-1);
+    transform: translateX(-100%);
+    transition: transform .26s cubic-bezier(.22,.61,.36,1);
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
   }
-  .nav { flex-direction: row; gap: 4px; flex: 1; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .nav__item { flex: 0 0 auto; white-space: nowrap; padding: 8px 12px; justify-content: flex-start; }
-  .app--rail .nav__item { padding: 8px 12px; gap: 11px; }
-  .nav__label,
-  .app--rail .nav__label { display: inline; }
-  /* the user/logout block lives in the header chip on mobile */
-  .sidebar__user { display: none; }
+  .app--menu-open .sidebar { transform: translateX(0); box-shadow: 0 0 60px rgba(0,0,0,.5); }
+
+  /* nav back to vertical inside the drawer, group labels visible again */
+  .nav { flex-direction: column; gap: 2px; flex: 1; overflow: visible; }
+  .nav__group { margin-bottom: 14px; }
+  .nav__grouplabel { display: block; }
+  .nav__item { width: 100%; justify-content: flex-start; padding: 11px 12px; white-space: nowrap; }
+  .nav__label { display: inline; }
+  /* show the user/logout block at the bottom of the drawer */
+  .sidebar__user { display: flex; margin-top: auto; }
+
+  /* dim backdrop behind the open drawer */
+  .sidebar__scrim {
+    position: fixed; inset: 0; z-index: 150; background: rgba(0,0,0,.5);
+    opacity: 0; pointer-events: none; transition: opacity .26s ease;
+  }
+  .app--menu-open .sidebar__scrim { opacity: 1; pointer-events: auto; }
+
+  .hamburger { display: inline-grid; }
 
   .main__content { padding: 20px 16px; }
   .topbar { flex-wrap: wrap; }
@@ -728,23 +745,41 @@ a:hover { color: var(--teal-hover); }
 
 /* ============ Authoritative responsive overrides (kept last so they win) ============ */
 @media (max-width: 860px) {
-  .appheader { position: static; height: auto; min-height: 56px; padding: 8px 14px;
+  .appheader { position: sticky; top: 0; z-index: 50; height: auto; min-height: 56px; padding: 8px 14px;
     grid-template-columns: auto 1fr auto; }
   .appheader__div { display: none; }
-  .appheader .brandmark__text { display: none; }
 
   .app__body, .app--rail .app__body { grid-template-columns: 1fr; }
 
+  /* off-canvas drawer */
   .sidebar {
-    flex-direction: row; align-items: center; gap: 4px;
-    padding: 8px 10px; border-right: none; border-bottom: 1px solid var(--border);
-    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 200;
+    width: 270px; max-width: 82vw;
+    flex-direction: column; align-items: stretch; gap: 0;
+    padding: 16px 12px; border-right: 1px solid var(--border); border-bottom: none;
+    background: var(--surface-1);
+    transform: translateX(-100%);
+    transition: transform .26s cubic-bezier(.22,.61,.36,1);
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
   }
-  .nav { flex-direction: row; gap: 4px; flex: 1; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .nav__item { flex: 0 0 auto; white-space: nowrap; padding: 8px 12px; justify-content: flex-start; gap: 9px; }
-  .app--rail .nav__item { padding: 8px 12px; gap: 9px; }
+  .app--menu-open .sidebar { transform: translateX(0); box-shadow: 0 0 60px rgba(0,0,0,.5); }
+
+  .nav { flex-direction: column; gap: 2px; flex: 1; overflow: visible; }
+  .nav__group { margin-bottom: 14px; }
+  .nav__grouplabel { display: block; }
+  .nav__item { width: 100%; justify-content: flex-start; padding: 11px 12px; height: auto; white-space: nowrap; gap: 11px; }
+  .app--rail .nav__item { padding: 11px 12px; gap: 11px; }
+  .nav__item svg, .app--rail .nav__item svg { width: 18px; height: 18px; }
   .nav__label, .app--rail .nav__label { display: inline; }
-  .sidebar__user { display: none; }
+  .sidebar__user { display: flex; margin-top: auto; }
+
+  .sidebar__scrim {
+    position: fixed; inset: 0; z-index: 150; background: rgba(0,0,0,.5);
+    opacity: 0; pointer-events: none; transition: opacity .26s ease; display: block;
+  }
+  .app--menu-open .sidebar__scrim { opacity: 1; pointer-events: auto; }
+
+  .hamburger { display: inline-grid; }
 
   .main__content { padding: 20px 16px; }
 }
@@ -1168,3 +1203,14 @@ body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
 .changelog__group { margin-bottom: 24px; }
 .changelog__list { margin: 8px 0 0; padding-left: 18px; }
 .changelog__list li { color: var(--text); line-height: 1.7; opacity: .9; }
+
+/* hamburger + drawer scrim: hidden on desktop, shown on mobile (trailing rules win the cascade) */
+.hamburger { display: none; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text); border-radius: 9px; cursor: pointer; }
+.hamburger:hover { background: var(--surface-3); }
+.sidebar__scrim { display: none; }
+@media (max-width: 860px) {
+  .hamburger { display: inline-grid !important; }
+  .sidebar__scrim { display: block; }
+}

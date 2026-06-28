@@ -5,7 +5,7 @@ import OrgPicker from "./Orgpicker";
 import NotificationBell from "./Notificationbell";
 import { SearchIcon } from "./icons";
 
-export default function Header({ onToggleRail, rail }: { onToggleRail: () => void; rail: boolean }) {
+export default function Header({ onToggleRail, rail, onToggleMenu }: { onToggleRail: () => void; rail: boolean; onToggleMenu?: () => void }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
@@ -35,6 +35,12 @@ export default function Header({ onToggleRail, rail }: { onToggleRail: () => voi
   return (
     <header className="appheader">
       <div className="appheader__brand">
+        <button className="hamburger" onClick={onToggleMenu}
+          aria-label="Open menu" title="Menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" width="20" height="20">
+            <path d="M3 6h18M3 12h18M3 18h18" />
+          </svg>
+        </button>
         <button className="railtoggle" onClick={onToggleRail}
           aria-label={rail ? "Expand sidebar" : "Collapse sidebar"} title={rail ? "Expand" : "Collapse"}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
